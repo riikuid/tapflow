@@ -109,3 +109,17 @@ describe('the agent slot', () => {
     expect(results.map((r) => r.held)).toEqual([false, false, false])
   })
 })
+
+describe('claimPath on Windows', () => {
+  it('uses a named pipe for the machine-wide default, since /tmp sockets do not exist there', () => {
+    expect(claimPath('android', undefined, 'win32')).toBe('\\\\.\\pipe\\tapflow-agent-android')
+  })
+
+  it('keeps an explicit directory (tests) as a socket path', () => {
+    expect(claimPath('android', '/x', 'win32')).toBe(join('/x', 'tapflow-agent-android.sock'))
+  })
+
+  it('is unchanged on macOS', () => {
+    expect(claimPath('ios', undefined, 'darwin')).toBe(join('/tmp', 'tapflow-agent-ios.sock'))
+  })
+})

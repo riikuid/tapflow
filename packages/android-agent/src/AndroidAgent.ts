@@ -345,9 +345,16 @@ interface PointerControl {
 // Video backend per device: emulators (serial `emulator-*`) default to the gRPC host-encode path
 // (bypasses the guest SW H.264 encoder); real devices use scrcpy (their SoC has a HW encoder).
 // `TAPFLOW_ANDROID_BACKEND=scrcpy|grpc` overrides either way.
-export function pickAndroidBackend(serial: string, env: NodeJS.ProcessEnv = process.env): 'grpc' | 'scrcpy' {
+// The gRPC path encodes on the host with `bin/emulator-encoder`, a macOS (VideoToolbox) binary, so
+// off macOS it can only fail and fall back — default straight to scrcpy there instead.
+export function pickAndroidBackend(
+  serial: string,
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): 'grpc' | 'scrcpy' {
   if (env.TAPFLOW_ANDROID_BACKEND === 'scrcpy') return 'scrcpy'
   if (env.TAPFLOW_ANDROID_BACKEND === 'grpc') return 'grpc'
+  if (platform !== 'darwin') return 'scrcpy'
   return serial.startsWith('emulator-') ? 'grpc' : 'scrcpy'
 }
 

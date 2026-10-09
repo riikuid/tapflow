@@ -38,7 +38,10 @@ const MACHINE_DIR = '/tmp'
  * rather than taken over. That is rare, it is the safe direction, and it gets its own sentence
  * instead of being reported as "already running".
  */
-export function claimPath(platform: string, dir = MACHINE_DIR): string {
+export function claimPath(platform: string, dir = MACHINE_DIR, os: NodeJS.Platform = process.platform): string {
+  // Windows has no Unix-domain socket files in `/tmp`; a named pipe is the machine-wide equivalent
+  // and, like the socket, goes away with the process that holds it.
+  if (os === 'win32' && dir === MACHINE_DIR) return `\\\\.\\pipe\\tapflow-agent-${platform}`
   return join(dir, `tapflow-agent-${platform}.sock`)
 }
 

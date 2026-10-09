@@ -44,6 +44,7 @@ export function probeEmulator(avdName: string): EmulatorProbe {
   // and every caller reads the result rather than catching. The name comes from a device id a browser
   // sent (`device:shutdown` validates it only as a string), and a throw there answered nothing at all.
   if (avdName.includes('\0')) return { state: 'unknown' }
+  if (process.platform === 'win32') return probeEmulatorWindows(avdName)
   const esc = avdName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const r = spawnSync(
     'pgrep',
@@ -62,6 +63,30 @@ export function probeEmulator(avdName: string): EmulatorProbe {
   // Exit 0 means it matched something, so unparseable output is "cannot tell", never "nothing".
   // `> 0` and not merely finite: `process.kill(0, …)` signals the caller's whole process group.
   const pid = parseInt((r.stdout ?? '').trim().split('\n')[0] ?? '', 10)
+  return Number.isInteger(pid) && pid > 0 ? { state: 'running', pid } : { state: 'unknown' }
+}
+
+/**
+ * `probeEmulator` for Windows, where there is no `pgrep`: list `qemu-system*` processes with their
+ * command lines through CIM and match the `-avd <name>` argument the same way, whole-word.
+ * The AVD name reaches PowerShell through an environment variable, never through the script text,
+ * so a name cannot alter the command. Same contract: a query that cannot run is `unknown`.
+ */
+export function probeEmulatorWindows(avdName: string): EmulatorProbe {
+  const script =
+    "$ErrorActionPreference='Stop';" +
+    "Get-CimInstance Win32_Process -Filter \"Name LIKE 'qemu-system%'\" | " +
+    "Where-Object { $_.CommandLine -match ('\\s-avd\\s+\"?' + [regex]::Escape($env:TAPFLOW_AVD_NAME) + '\"?(\\s|$)') } | " +
+    'Select-Object -First 1 -ExpandProperty ProcessId'
+  const r = spawnSync(
+    'powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-Command', script],
+    { encoding: 'utf8', env: { ...process.env, TAPFLOW_AVD_NAME: avdName }, windowsHide: true },
+  )
+  if (r.error || r.status !== 0) return { state: 'unknown' }
+  const out = (r.stdout ?? '').trim()
+  if (out === '') return { state: 'gone' }
+  const pid = parseInt(out.split(/\r?\n/)[0] ?? '', 10)
   return Number.isInteger(pid) && pid > 0 ? { state: 'running', pid } : { state: 'unknown' }
 }
 
@@ -111,7 +136,7 @@ export function stopEmulatorProcess(avdName: string): boolean {
 export function buildEmulatorArgs(avdName: string, grpcPort?: number, opts?: EmulatorLaunchOpts): string[] {
   const args = ['-avd', avdName]
   if (!opts?.audio) args.push('-no-audio')
-  args.push('-no-snapshot', '-no-window', '-gpu', 'host')
+  args.push('-no-snapshot', '-no-window', '-gpu', process.env.TAPFLOW_ANDROID_GPU || 'host')
   if (opts?.wipeData) args.push('-wipe-data')
   if (grpcPort !== undefined) args.push('-grpc', String(grpcPort))
   return args
@@ -126,6 +151,7 @@ export class EmulatorLauncher {
     const proc = spawn(getEmulatorPath(), args, {
       detached: true,
       stdio: 'ignore',
+      windowsHide: true, // Windows: a detached child otherwise opens its own console window
     })
     proc.on('error', (err) => logger.error(`emulator launch failed: ${err.message}`))
     proc.unref()

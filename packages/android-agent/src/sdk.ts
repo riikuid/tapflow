@@ -16,6 +16,7 @@ export function androidSdkCandidates(): string[] {
     process.env['ANDROID_SDK_ROOT'],
     join(homedir(), 'Library', 'Android', 'sdk'), // macOS
     join(homedir(), 'Android', 'Sdk'), // Linux
+    ...(process.env['LOCALAPPDATA'] ? [join(process.env['LOCALAPPDATA'], 'Android', 'Sdk')] : []), // Windows
   ].filter((c): c is string => Boolean(c))
 }
 
@@ -31,25 +32,38 @@ function isExecutableFile(candidate: string): boolean {
   }
 }
 
+/** The file names a tool can have on this platform: Windows SDKs ship `adb.exe` / `emulator.exe`. */
+export function executableNames(name: string, platform: NodeJS.Platform = process.platform): string[] {
+  return platform === 'win32' ? [`${name}.exe`, `${name}.bat`, `${name}.cmd`] : [name]
+}
+
 /** The first SDK candidate holding `<subdir>/<name>`, then `name` on PATH — the PATH step is what
  *  the agent's own `canRun` checks, so an agent that registered can also find the binary. */
 function resolveSdkTool(subdir: string, name: string): string | null {
+  const names = executableNames(name)
   for (const sdk of androidSdkCandidates()) {
-    const candidate = join(sdk, subdir, name)
-    if (isExecutableFile(candidate)) return candidate
+    for (const n of names) {
+      const candidate = join(sdk, subdir, n)
+      if (isExecutableFile(candidate)) return candidate
+    }
   }
   for (const dir of (process.env['PATH'] ?? '').split(delimiter)) {
     if (!dir) continue
-    const candidate = join(dir, name)
-    if (isExecutableFile(candidate)) return candidate
+    for (const n of names) {
+      const candidate = join(dir, n)
+      if (isExecutableFile(candidate)) return candidate
+    }
   }
   return null
 }
 
 function notFound(what: string): ValidationError {
+  const example = process.platform === 'win32'
+    ? 'Example: setx ANDROID_HOME %LOCALAPPDATA%\\Android\\Sdk'
+    : 'Example: export ANDROID_HOME=$HOME/Library/Android/sdk'
   return new ValidationError(
     `${what} not found in ${androidSdkCandidates().join(', ')} or on PATH.\n` +
-    'Set ANDROID_HOME to your Android SDK. Example: export ANDROID_HOME=$HOME/Library/Android/sdk',
+    `Set ANDROID_HOME to your Android SDK. ${example}`,
   )
 }
 

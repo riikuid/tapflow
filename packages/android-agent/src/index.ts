@@ -1,7 +1,7 @@
-import { execSync } from 'node:child_process'
 import { AgentRegistry } from '@tapflowio/agent-core'
 import type { AgentConnectOpts } from '@tapflowio/agent-core'
 import { AndroidAgent } from './AndroidAgent.js'
+import { getAdbPath } from './sdk.js'
 
 export { AndroidAgent } from './AndroidAgent.js'
 export type { AndroidAgentOptions } from './AndroidAgent.js'
@@ -12,9 +12,12 @@ export { ScrcpySession } from './scrcpy/ScrcpySession.js'
 export { ScrcpyControl } from './scrcpy/ScrcpyControl.js'
 export { ScrcpyVideo } from './scrcpy/ScrcpyVideo.js'
 
+// The same lookup the agent runs adb through (SDK candidates, then PATH) rather than `which adb`:
+// `which` does not exist on Windows, and an SDK found via ANDROID_HOME alone would otherwise pass
+// every later lookup yet leave the platform unregistered.
 function hasAdb(): boolean {
   try {
-    return execSync('which adb', { encoding: 'utf8', stdio: 'pipe' }).trim().length > 0
+    return getAdbPath().length > 0
   } catch {
     return false
   }

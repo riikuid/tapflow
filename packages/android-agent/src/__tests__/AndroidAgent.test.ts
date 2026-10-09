@@ -4021,11 +4021,20 @@ describe('pickAndroidBackend', () => {
   })
 
   it('defaults an emulator-* serial to grpc when unset', () => {
-    expect(pickAndroidBackend('emulator-5556', {})).toBe('grpc')
+    expect(pickAndroidBackend('emulator-5556', {}, 'darwin')).toBe('grpc')
   })
 
   it('defaults a real-device serial to scrcpy when unset', () => {
-    expect(pickAndroidBackend('39021FDH2003ZZ', {})).toBe('scrcpy')
+    expect(pickAndroidBackend('39021FDH2003ZZ', {}, 'darwin')).toBe('scrcpy')
+  })
+
+  it('defaults an emulator-* serial to scrcpy off macOS, where the host encoder cannot run', () => {
+    expect(pickAndroidBackend('emulator-5556', {}, 'win32')).toBe('scrcpy')
+    expect(pickAndroidBackend('emulator-5556', {}, 'linux')).toBe('scrcpy')
+  })
+
+  it('still honors TAPFLOW_ANDROID_BACKEND=grpc off macOS', () => {
+    expect(pickAndroidBackend('emulator-5556', { TAPFLOW_ANDROID_BACKEND: 'grpc' }, 'win32')).toBe('grpc')
   })
 })
 

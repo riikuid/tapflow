@@ -7,7 +7,7 @@ vi.mock('node:fs', () => ({ statSync: vi.fn(), accessSync: vi.fn(), constants: {
 vi.mock('node:os', () => ({ homedir: () => '/Users/dev' }))
 
 import { ValidationError } from '@tapflowio/agent-core'
-import { getAdbPath, getEmulatorPath } from '../sdk'
+import { getAdbPath, getEmulatorPath, executableNames } from '../sdk'
 
 const STUDIO_SDK = '/Users/dev/Library/Android/sdk'
 
@@ -120,5 +120,16 @@ describe('Android SDK resolution', () => {
 
     expect(() => getAdbPath()).toThrow(ValidationError)
     expect(() => getEmulatorPath()).toThrow(/ANDROID_HOME/)
+  })
+})
+
+describe('executableNames', () => {
+  it('looks for the bare name on macOS and Linux', () => {
+    expect(executableNames('adb', 'darwin')).toEqual(['adb'])
+    expect(executableNames('adb', 'linux')).toEqual(['adb'])
+  })
+
+  it('looks for adb.exe (then .bat/.cmd) on Windows, where the SDK ships no extensionless binary', () => {
+    expect(executableNames('emulator', 'win32')).toEqual(['emulator.exe', 'emulator.bat', 'emulator.cmd'])
   })
 })

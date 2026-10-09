@@ -29,6 +29,15 @@ function getServerJarPath(): string {
 
 // Each session gets its own port; control connects to the same forwarded port
 let nextPort = 27183
+
+/** Pause between handshake attempts while scrcpy-server is still starting. */
+const CONNECT_RETRY_MS = 250
+
+/** How long to keep retrying the handshake. `TAPFLOW_SCRCPY_CONNECT_TIMEOUT_MS` overrides. */
+export function connectTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  const v = parseInt(env.TAPFLOW_SCRCPY_CONNECT_TIMEOUT_MS ?? '', 10)
+  return Number.isFinite(v) && v > 0 ? v : 20_000
+}
 function allocatePort(): number {
   return nextPort++
 }
@@ -112,7 +121,9 @@ export class ScrcpySession {
     serverProc.on('error', (e) => logger.error(`server process: ${e.message}`))
     // Log why the server exited so restart loops have a recorded cause. Expected exits (our own
     // stop() records stoppedProc) are debug-level noise; unexpected ones are warnings.
+    let serverExited = false
     serverProc.on('exit', (code, signal) => {
+      serverExited = true
       const detail = `code=${code ?? '-'} signal=${signal ?? '-'}`
       if (this.stoppedProc === serverProc) {
         logger.debug(`server process exited (${detail})`)
@@ -130,13 +141,36 @@ export class ScrcpySession {
 
       // scrcpy accepts connections sequentially on the same socket:
       // 1st accept() → video stream, 2nd accept() → control stream
-      this.videoSocket = await this.connectTcp(port)
-      this.controlSocket = await this.connectTcp(port)
+      //
+      // The 1.5s above is a guess at how long `app_process` takes to bind the abstract socket, and on
+      // a slower host it is wrong: under Windows WHPX on an i5-8250U the server logs its first line
+      // after ~4.3s. Until then `adb forward` still *accepts* the TCP connection and closes it at
+      // once, which surfaced as "closed before sending device info" on every attempt. So retry the
+      // handshake until the server is listening, or it exits, or the deadline passes.
+      const deadline = Date.now() + connectTimeoutMs()
+      let info: ScrcpyDeviceInfo | undefined
+      for (let attempt = 1; ; attempt++) {
+        try {
+          this.videoSocket = await this.connectTcp(port)
+          this.controlSocket = await this.connectTcp(port)
+          this._video = new ScrcpyVideo(this.videoSocket)
+          info = await this._video.deviceInfo()
+          if (attempt > 1) logger.info(`server reachable after ${attempt} attempts`)
+          break
+        } catch (e) {
+          this.videoSocket?.destroy()
+          this.controlSocket?.destroy()
+          this.videoSocket = null
+          this.controlSocket = null
+          this._video = null
+          // Give up at once if the server is gone or this start was superseded by stop().
+          const stopped = this.serverProc !== serverProc
+          if (serverExited || stopped || Date.now() + CONNECT_RETRY_MS > deadline) throw e
+          await new Promise((r) => setTimeout(r, CONNECT_RETRY_MS))
+        }
+      }
 
-      this._video = new ScrcpyVideo(this.videoSocket)
-      const info = await this._video.deviceInfo()
-
-      this._control = new ScrcpyControl(this.controlSocket, info.width, info.height)
+      this._control = new ScrcpyControl(this.controlSocket!, info.width, info.height)
       logger.info(`ready — ${info.deviceName} ${info.width}×${info.height}`)
       return info
     } catch (e) {

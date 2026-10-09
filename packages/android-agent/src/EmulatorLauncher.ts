@@ -142,6 +142,21 @@ export function buildEmulatorArgs(avdName: string, grpcPort?: number, opts?: Emu
   return args
 }
 
+/**
+ * How long a freshly launched emulator may take to show up in `adb devices` as `device`.
+ * 30s is enough on Apple Silicon (HVF). Under Windows WHPX (and slower x86 hosts) a cold start sits
+ * `offline` for well over that — measured ~45-60s on an i5-8250U — so the boot was reported failed
+ * while it was proceeding. `TAPFLOW_EMULATOR_SERIAL_TIMEOUT_MS` overrides either default.
+ */
+export function defaultSerialTimeoutMs(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): number {
+  const fromEnv = parseInt(env.TAPFLOW_EMULATOR_SERIAL_TIMEOUT_MS ?? '', 10)
+  if (Number.isFinite(fromEnv) && fromEnv > 0) return fromEnv
+  return platform === 'darwin' ? 30_000 : 180_000
+}
+
 export class EmulatorLauncher {
   /** `grpcPort`, when set, opens the emulator's unprotected localhost gRPC endpoint
    *  (`-grpc <port>`) for host-side screen capture + input — the same trust boundary as
@@ -157,7 +172,7 @@ export class EmulatorLauncher {
     proc.unref()
   }
 
-  async findSerial(avdName: string, timeoutMs = 30_000): Promise<string> {
+  async findSerial(avdName: string, timeoutMs = defaultSerialTimeoutMs()): Promise<string> {
     const adb = getAdbPath()
     const deadline = Date.now() + timeoutMs
 

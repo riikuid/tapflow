@@ -28,7 +28,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 
 const navItems = [
   { label: 'App Center', href: '/app-center', icon: LayoutGrid },
-  { label: 'Mac Resources', href: '/mac-resources', icon: Monitor },
+  { label: 'Host Resources', href: '/mac-resources', icon: Monitor },
 ]
 
 const settingsItems = [

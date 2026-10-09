@@ -168,7 +168,7 @@ export function TokenSettings() {
                 <Input ref={tokenRef} readOnly value={newToken} aria-labelledby={tokenLabelId} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
                 {tokenType === 'agent' && agentWsBase && (
                   <>
-                    <p id={commandLabelId} className="text-sm text-muted-foreground">Run this on the agent Mac to connect it to this relay:</p>
+                    <p id={commandLabelId} className="text-sm text-muted-foreground">Run this on the agent host to connect it to this relay:</p>
                     <Input readOnly value={`tapflow agent start --relay ${agentWsBase} --token ${newToken}`} aria-labelledby={commandLabelId} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
                   </>
                 )}

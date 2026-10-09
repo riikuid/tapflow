@@ -19,6 +19,10 @@ export interface AgentResources {
   slotsTotal: number
   /** Date.now() */
   reportedAt: number
+  /** The relay's session-refusal threshold in percent (`TAPFLOW_RESOURCE_THRESHOLD_PERCENT`), stamped
+   *  by the relay so the dashboard greys a host out at the same point the relay starts refusing.
+   *  Absent from older relays; viewers fall back to 80. */
+  blockThreshold?: number
 }
 
 /** What kind of device it is, for what the viewer draws around it. A string literal union, not a

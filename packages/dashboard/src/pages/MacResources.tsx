@@ -52,7 +52,7 @@ export function MacResources() {
 
   const { setNode: setBreadcrumb } = useBreadcrumb()
   useEffect(() => {
-    setBreadcrumb(<span className="text-sm font-medium">Mac Resources</span>)
+    setBreadcrumb(<span className="text-sm font-medium">Host Resources</span>)
     return () => setBreadcrumb(null)
   }, [setBreadcrumb])
 
@@ -153,13 +153,13 @@ export function MacResources() {
 
   return (
     <div className="flex h-full min-h-0">
-      <h1 className="sr-only">Mac Resources</h1>
+      <h1 className="sr-only">Host Resources</h1>
       {/* Macs sidebar. The title is a heading rather than a styled span for the same reason the chart
           titles are: with the charts now landmarked by `h2`, this list would be the one region of the page
           a screen-reader user could not jump to. */}
       <aside aria-labelledby="macs-heading" className="w-64 shrink-0 border-r flex flex-col gap-1 p-3 overflow-y-auto">
         <h2 id="macs-heading" className="px-2 pb-1 font-mono text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Macs
+          Hosts
         </h2>
         {allAgents.length === 0 ? (
           <span className="px-2 text-sm text-muted-foreground">
@@ -198,7 +198,7 @@ export function MacResources() {
         {!selectedAgent ? (
           <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
             <Monitor className="h-8 w-8" />
-            <p className="text-sm">Select a Mac to view resource history.</p>
+            <p className="text-sm">Select a host to view resource history.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-6 p-6">

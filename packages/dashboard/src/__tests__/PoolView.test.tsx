@@ -48,7 +48,7 @@ function MacCard({ session, onClick }: { session: SessionInfo; onClick?: () => v
       data-testid="mac-card"
       disabled={isOverloaded}
       onClick={onClick}
-      title={isOverloaded ? 'This Mac is currently overloaded. Try again later.' : undefined}
+      title={isOverloaded ? 'This host is currently overloaded. Try again later.' : undefined}
     >
       <span data-testid="health-dot" data-health={health} />
       <span data-testid="agent-name">{session.agentName ?? 'Unknown'}</span>
@@ -227,7 +227,7 @@ describe('MacCard', () => {
   it('overloaded 카드에 tooltip title이 있다', () => {
     const session = { ...baseSession, resources: makeResources(81, 30) }
     render(<MacCard session={session} />)
-    expect(screen.getByTestId('mac-card')).toHaveAttribute('title', 'This Mac is currently overloaded. Try again later.')
+    expect(screen.getByTestId('mac-card')).toHaveAttribute('title', 'This host is currently overloaded. Try again later.')
   })
 
   it('overloaded 카드는 클릭해도 onClick이 호출되지 않는다', async () => {

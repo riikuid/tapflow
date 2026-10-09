@@ -41,7 +41,7 @@ type ViewerStoppedReason = SessionTerminatedReason | 'busy-elsewhere' | 'mac-ove
 const SESSION_ENDED_NOTICE: Record<ViewerStoppedReason, { title: string; description: string }> = {
   'agent-disconnected': {
     title: 'The agent disconnected — this session ended.',
-    description: 'Pick the Mac again to start a new session.',
+    description: 'Pick the host again to start a new session.',
   },
   // **This copy used to lead with "it is probably your own tab", and that stopped being the common case.**
   // The relay answered `session-busy` whenever the browser socket still read OPEN, so an automatic
@@ -61,8 +61,8 @@ const SESSION_ENDED_NOTICE: Record<ViewerStoppedReason, { title: string; descrip
   // The Mac is over its ceiling, so a different Mac is the actionable move — and unlike the other two
   // this one is about the machine, not the session.
   'mac-overloaded': {
-    title: 'That Mac is too busy to start a session.',
-    description: 'Pick a different Mac, or wait for it to settle.',
+    title: 'That host is too busy to start a session.',
+    description: 'Pick a different host, or wait for it to settle.',
   },
 };
 
@@ -202,7 +202,7 @@ export function QASession() {
                   onClick={handleBackToMacs}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  ← All Macs
+                  ← All hosts
                 </button>
                 <h1 className="text-xl font-semibold tracking-tight">Select device</h1>
               </div>
@@ -315,7 +315,7 @@ export function QASession() {
             </div>
           ) : (
             <div className="flex flex-col gap-5">
-              <h1 className="text-xl font-semibold tracking-tight">Select Mac</h1>
+              <h1 className="text-xl font-semibold tracking-tight">Select host</h1>
 
               {agentGroups.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -378,7 +378,7 @@ export function QASession() {
                             </span>
                           </TooltipTrigger>
                           {isOverloaded && (
-                            <TooltipContent>This Mac is currently overloaded. Try again later.</TooltipContent>
+                            <TooltipContent>This host is currently overloaded. Try again later.</TooltipContent>
                           )}
                         </Tooltip>
                       </TooltipProvider>

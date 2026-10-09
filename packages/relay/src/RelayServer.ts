@@ -1833,7 +1833,9 @@ export class RelayServer {
   }
 
   private handleAgentResources(ws: WebSocket, msg: Inbound<'agent:resources'>): void {
-    this.sessions.setResources(ws, msg.resources)
+    // Stamp the refusal threshold so the dashboard disables a host at the same point `session:join`
+    // starts refusing it, instead of at its own hard-coded 80%.
+    this.sessions.setResources(ws, { ...msg.resources, blockThreshold: RESOURCE_THRESHOLD })
     const agentName = this.sessions.getAllByAgentSocket(ws)[0]?.agentName
     if (agentName) {
       const buf = this.resourceBuffers.get(agentName) ?? { cpu: [], mem: [] }
